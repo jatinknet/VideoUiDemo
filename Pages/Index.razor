@@ -1,0 +1,113 @@
+@page "/"
+@implements IDisposable
+@inject IVideoMetadataService MetadataService
+@inject ILogger<Index> Logger
+
+<PageTitle>Video UI Demo</PageTitle>
+
+<VideoInput Url="@_url"
+            UrlChanged="@(v => _url = v)"
+            OnSubmit="HandleSubmitAsync"
+            IsLoading="@(_state == LoadState.Loading)"
+            ErrorMessage="@_errorMessage" />
+
+<div class="result-area">
+    @switch (_state)
+    {
+        case LoadState.Loading:
+            <p class="status" aria-live="polite">Fetching video info…</p>
+            break;
+
+        case LoadState.Error:
+            <p class="status status--error" role="alert">@_errorMessage</p>
+            break;
+
+        case LoadState.Loaded when _metadata is not null:
+            <div class="result-grid">
+                <VideoPreview Metadata="@_metadata" />
+
+                <div class="result-grid__right">
+                    <h2 class="video-details__title">@_metadata.Title</h2>
+                    <VideoDetails Metadata="@_metadata" />
+                </div>
+            </div>
+            break;
+    }
+</div>
+
+@code {
+    private string _url = string.Empty;
+    private Models.VideoMetadata? _metadata;
+    private LoadState _state = LoadState.Idle;
+    private string? _errorMessage;
+
+    // Per-request cancellation so a stale fetch can't overwrite newer state
+    // and so nothing keeps running after the component is disposed.
+    private CancellationTokenSource? _cts;
+
+    private async Task HandleSubmitAsync(string url)
+    {
+        // Cancel any in-flight fetch before starting a new one.
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+
+        _errorMessage = null;
+        _metadata = null;
+        _state = LoadState.Loading;
+
+        try
+        {
+            _metadata = await MetadataService.GetMetadataAsync(url, _cts.Token);
+            _state = LoadState.Loaded;
+        }
+        catch (OperationCanceledException ex)
+        {
+            // Distinguish "we cancelled this because a newer request came in"
+            // from "the HTTP call itself timed out".
+            if (_cts is not null && ex.CancellationToken == _cts.Token && _cts.IsCancellationRequested)
+            {
+                return; // superseded by a newer request; do nothing
+            }
+
+            Logger.LogError(ex, "YouTube API request timed out");
+            _errorMessage = "The request to the YouTube API timed out. Please try again.";
+            _state = LoadState.Error;
+        }
+        catch (FormatException ex)
+        {
+            _errorMessage = ex.Message;
+            _state = LoadState.Error;
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Config/API errors (missing key, quota, not found, etc.)
+            _errorMessage = ex.Message;
+            _state = LoadState.Error;
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error calling YouTube API");
+            _errorMessage = $"Couldn't reach the YouTube API: {ex.Message}";
+            _state = LoadState.Error;
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            Logger.LogError(ex, "Failed to parse YouTube API response");
+            _errorMessage = $"Got an unexpected response from the YouTube API: {ex.Message}";
+            _state = LoadState.Error;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected error fetching video metadata");
+            _errorMessage = $"Something went wrong while fetching video info: {ex.Message}";
+            _state = LoadState.Error;
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

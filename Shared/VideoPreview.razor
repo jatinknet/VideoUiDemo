@@ -1,0 +1,25 @@
+@* Left-side thumbnail card: image with a duration badge, title below. *@
+
+@if (Metadata is not null)
+{
+    <div class="video-preview">
+        <div class="video-preview__thumb-wrap">
+            <img src="@Metadata.ThumbnailUrl"
+                 alt="Thumbnail for @Metadata.Title"
+                 class="video-preview__thumb"
+                 loading="lazy" />
+
+            @if (Metadata.Duration > TimeSpan.Zero)
+            {
+                <span class="video-preview__duration">@Metadata.DurationDisplay</span>
+            }
+        </div>
+
+        <p class="video-preview__title">@Metadata.Title</p>
+        <p class="video-preview__meta">@Metadata.ChannelTitle</p>
+    </div>
+}
+
+@code {
+    [Parameter] public Models.VideoMetadata? Metadata { get; set; }
+}

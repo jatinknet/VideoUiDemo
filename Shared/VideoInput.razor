@@ -1,0 +1,75 @@
+@* Text box for entering a video URL, styled to match the reference layout:
+   centered title, bordered input with a pill "Start" button. *@
+
+<div class="hero">
+    <h1 class="hero__title">Fetch Video and Audio Info</h1>
+
+    <div class="video-input">
+        <div class="video-input__row">
+            <input id="video-url"
+                   type="url"
+                   class="video-input__field"
+                   placeholder="Paste a video URL"
+                   value="@Url"
+                   @oninput="OnInputChanged"
+                   @onkeyup="OnKeyUp"
+                   aria-describedby="video-url-error"
+                   aria-invalid="@(HasError ? "true" : "false")"
+                   disabled="@IsLoading" />
+
+            <button type="button"
+                    class="video-input__button"
+                    @onclick="SubmitAsync"
+                    disabled="@(IsLoading || string.IsNullOrWhiteSpace(Url))">
+                @if (IsLoading)
+                {
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span>Loading…</span>
+                }
+                else
+                {
+                    <span>Start &#8594;</span>
+                }
+            </button>
+        </div>
+
+        @if (HasError)
+        {
+            <p id="video-url-error" class="video-input__error" role="alert">@ErrorMessage</p>
+        }
+
+        <p class="hero__disclaimer">Fetches real metadata via the YouTube Data API. No downloading.</p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Url { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> UrlChanged { get; set; }
+    [Parameter] public EventCallback<string> OnSubmit { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    private bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+
+    private async Task OnInputChanged(ChangeEventArgs e)
+    {
+        Url = e.Value?.ToString() ?? string.Empty;
+        await UrlChanged.InvokeAsync(Url);
+    }
+
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SubmitAsync();
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Url) || IsLoading)
+            return;
+
+        await OnSubmit.InvokeAsync(Url);
+    }
+}

@@ -1,0 +1,162 @@
+@* Displays all metadata available from the official YouTube Data API,
+   organized into labeled sections for readability. No format list or
+   download controls — that data isn't exposed by the official API. *@
+
+@if (Metadata is not null)
+{
+    <div class="video-details">
+
+        <section class="details-section">
+            <h3 class="details-section__heading">Stats</h3>
+            <div class="stats-grid">
+                <div class="stat">
+                    <span class="stat__value">@FormatCount(Metadata.ViewCount)</span>
+                    <span class="stat__label">Views</span>
+                </div>
+                <div class="stat">
+                    <span class="stat__value">@FormatCount(Metadata.LikeCount)</span>
+                    <span class="stat__label">Likes</span>
+                </div>
+                <div class="stat">
+                    <span class="stat__value">@FormatCount(Metadata.CommentCount)</span>
+                    <span class="stat__label">Comments</span>
+                </div>
+                <div class="stat">
+                    <span class="stat__value">@(Metadata.PublishedAt?.ToString("MMM d, yyyy") ?? "—")</span>
+                    <span class="stat__label">Published</span>
+                </div>
+            </div>
+        </section>
+
+        @if (Metadata.Tags.Count > 0 || !string.IsNullOrWhiteSpace(Metadata.CategoryName))
+        {
+            <section class="details-section">
+                <h3 class="details-section__heading">Tags &amp; Category</h3>
+
+                @if (!string.IsNullOrWhiteSpace(Metadata.CategoryName))
+                {
+                    <p class="details-section__row">
+                        <span class="details-section__row-label">Category:</span>
+                        <span class="badge badge--category">@Metadata.CategoryName</span>
+                    </p>
+                }
+
+                @if (Metadata.Tags.Count > 0)
+                {
+                    <div class="tag-list">
+                        @foreach (var tag in Metadata.Tags)
+                        {
+                            <span class="badge badge--tag">@tag</span>
+                        }
+                    </div>
+                }
+            </section>
+        }
+
+        <section class="details-section">
+            <h3 class="details-section__heading">Technical Details</h3>
+            <div class="badge-row">
+                @if (!string.IsNullOrWhiteSpace(Metadata.Definition))
+                {
+                    <span class="badge badge--tech">@Metadata.Definition.ToUpperInvariant()</span>
+                }
+                <span class="badge badge--tech">@(Metadata.HasCaptions ? "Captions available" : "No captions")</span>
+                @if (!string.IsNullOrWhiteSpace(Metadata.Dimension))
+                {
+                    <span class="badge badge--tech">@Metadata.Dimension.ToUpperInvariant()</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(Metadata.Projection) &&
+                     !string.Equals(Metadata.Projection, "rectangular", StringComparison.OrdinalIgnoreCase))
+                {
+                    <span class="badge badge--tech">@Metadata.Projection</span>
+                }
+                <span class="badge badge--tech">@(Metadata.LicensedContent ? "Licensed content" : "Not flagged as licensed")</span>
+            </div>
+        </section>
+
+        <section class="details-section">
+            <h3 class="details-section__heading">Status</h3>
+            <div class="badge-row">
+                @if (!string.IsNullOrWhiteSpace(Metadata.PrivacyStatus))
+                {
+                    <span class="badge badge--status">@Capitalize(Metadata.PrivacyStatus)</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(Metadata.License))
+                {
+                    <span class="badge badge--status">
+                        @(Metadata.License == "creativeCommon" ? "Creative Commons" : "Standard YouTube License")
+                    </span>
+                }
+                <span class="badge badge--status">@(Metadata.Embeddable ? "Embeddable" : "Not embeddable")</span>
+                <span class="badge badge--status">@(Metadata.MadeForKids ? "Made for kids" : "Not made for kids")</span>
+            </div>
+        </section>
+
+        @if (Metadata.TopicCategories.Count > 0)
+        {
+            <section class="details-section">
+                <h3 class="details-section__heading">Topics</h3>
+                <div class="tag-list">
+                    @foreach (var topicUrl in Metadata.TopicCategories)
+                    {
+                        <a class="badge badge--topic"
+                           href="@topicUrl"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            @FormatTopicName(topicUrl)
+                        </a>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Metadata.Description))
+        {
+            <section class="details-section">
+                <h3 class="details-section__heading">Description</h3>
+                <p class="video-details__description">@TruncatedDescription</p>
+            </section>
+        }
+
+        <a class="video-details__source-link"
+           href="@($"https://www.youtube.com/watch?v={Metadata.VideoId}")"
+           target="_blank"
+           rel="noopener noreferrer">
+            View on YouTube &#8599;
+        </a>
+    </div>
+}
+
+@code {
+    [Parameter] public Models.VideoMetadata? Metadata { get; set; }
+
+    private const int MaxDescriptionChars = 400;
+
+    private string TruncatedDescription =>
+        Metadata!.Description.Length > MaxDescriptionChars
+            ? Metadata.Description[..MaxDescriptionChars].TrimEnd() + "…"
+            : Metadata.Description;
+
+    private static string FormatCount(long? value)
+    {
+        if (value is null) return "—";
+
+        return value switch
+        {
+            >= 1_000_000_000 => $"{value / 1_000_000_000.0:0.#}B",
+            >= 1_000_000 => $"{value / 1_000_000.0:0.#}M",
+            >= 1_000 => $"{value / 1_000.0:0.#}K",
+            _ => value.Value.ToString("N0")
+        };
+    }
+
+    private static string Capitalize(string value) =>
+        string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];
+
+    private static string FormatTopicName(string wikipediaUrl)
+    {
+        // Topic URLs look like https://en.wikipedia.org/wiki/Music
+        var lastSegment = wikipediaUrl.TrimEnd('/').Split('/').LastOrDefault() ?? wikipediaUrl;
+        return Uri.UnescapeDataString(lastSegment).Replace('_', ' ');
+    }
+}
