@@ -1,25 +1,76 @@
-@* Left-side thumbnail card: image with a duration badge, title below. *@
+@* Left-side card: thumbnail (with duration badge) that swaps to the
+   official YouTube embedded player on click, title, and a link to the
+   channel. Uses YouTube's standard /embed/ iframe — no scraping or
+   third-party stream extraction. *@
 
 @if (Metadata is not null)
 {
     <div class="video-preview">
         <div class="video-preview__thumb-wrap">
-            <img src="@Metadata.ThumbnailUrl"
-                 alt="Thumbnail for @Metadata.Title"
-                 class="video-preview__thumb"
-                 loading="lazy" />
-
-            @if (Metadata.Duration > TimeSpan.Zero)
+            @if (_showPlayer && Metadata.Embeddable)
             {
-                <span class="video-preview__duration">@Metadata.DurationDisplay</span>
+                <iframe class="video-preview__player"
+                        src="@($"https://www.youtube.com/embed/{Metadata.VideoId}?autoplay=1")"
+                        title="@Metadata.Title"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            }
+            else
+            {
+                <img src="@Metadata.ThumbnailUrl"
+                     alt="Thumbnail for @Metadata.Title"
+                     class="video-preview__thumb"
+                     loading="lazy" />
+
+                @if (Metadata.Duration > TimeSpan.Zero)
+                {
+                    <span class="video-preview__duration">@Metadata.DurationDisplay</span>
+                }
+
+                @if (Metadata.Embeddable)
+                {
+                    <button type="button"
+                            class="video-preview__play-btn"
+                            aria-label="Play video"
+                            @onclick="() => _showPlayer = true">
+                        &#9658;
+                    </button>
+                }
             }
         </div>
 
+        @if (!Metadata.Embeddable)
+        {
+            <p class="video-preview__no-embed">Embedding disabled by uploader — watch on YouTube instead.</p>
+        }
+
         <p class="video-preview__title">@Metadata.Title</p>
-        <p class="video-preview__meta">@Metadata.ChannelTitle</p>
+
+        @if (!string.IsNullOrEmpty(Metadata.ChannelId))
+        {
+            <a class="video-preview__meta video-preview__meta--link"
+               href="@($"https://www.youtube.com/channel/{Metadata.ChannelId}")"
+               target="_blank"
+               rel="noopener noreferrer">
+                @Metadata.ChannelTitle
+            </a>
+        }
+        else
+        {
+            <p class="video-preview__meta">@Metadata.ChannelTitle</p>
+        }
     </div>
 }
 
 @code {
     [Parameter] public Models.VideoMetadata? Metadata { get; set; }
+
+    private bool _showPlayer;
+
+    protected override void OnParametersSet()
+    {
+        // Reset the inline player whenever a new video is loaded.
+        _showPlayer = false;
+    }
 }

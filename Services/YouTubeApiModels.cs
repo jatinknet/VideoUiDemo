@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace VideoUiDemo.Services;
@@ -43,6 +44,9 @@ internal sealed class YouTubeSnippet
 
     [JsonPropertyName("channelTitle")]
     public string ChannelTitle { get; set; } = string.Empty;
+
+    [JsonPropertyName("channelId")]
+    public string ChannelId { get; set; } = string.Empty;
 
     [JsonPropertyName("publishedAt")]
     public DateTimeOffset? PublishedAt { get; set; }
@@ -97,6 +101,30 @@ internal sealed class YouTubeContentDetails
 
     [JsonPropertyName("projection")]
     public string? Projection { get; set; } // "rectangular", "360", etc.
+
+    [JsonPropertyName("contentRating")]
+    public YouTubeContentRating? ContentRating { get; set; }
+
+    [JsonPropertyName("regionRestriction")]
+    public YouTubeRegionRestriction? RegionRestriction { get; set; }
+}
+
+internal sealed class YouTubeContentRating
+{
+    // The API returns many possible rating-system keys (mpaaRating, tvpgRating,
+    // ytRating, etc.) only when a rating applies. We just grab whichever are
+    // present via a dictionary rather than declaring every possible key.
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Ratings { get; set; }
+}
+
+internal sealed class YouTubeRegionRestriction
+{
+    [JsonPropertyName("allowed")]
+    public List<string>? Allowed { get; set; }
+
+    [JsonPropertyName("blocked")]
+    public List<string>? Blocked { get; set; }
 }
 
 internal sealed class YouTubeStatistics
@@ -168,4 +196,51 @@ internal sealed class YouTubeCategorySnippet
 {
     [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
+}
+
+// --- channels.list (used to fetch full channel details) ---
+
+internal sealed class YouTubeChannelsResponse
+{
+    [JsonPropertyName("items")]
+    public List<YouTubeChannelItem> Items { get; set; } = new();
+}
+
+internal sealed class YouTubeChannelItem
+{
+    [JsonPropertyName("snippet")]
+    public YouTubeChannelSnippet? Snippet { get; set; }
+
+    [JsonPropertyName("statistics")]
+    public YouTubeChannelStatistics? Statistics { get; set; }
+}
+
+internal sealed class YouTubeChannelSnippet
+{
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    public string Description { get; set; } = string.Empty;
+
+    [JsonPropertyName("thumbnails")]
+    public YouTubeThumbnails? Thumbnails { get; set; }
+
+    [JsonPropertyName("publishedAt")]
+    public DateTimeOffset? PublishedAt { get; set; } // channel creation date
+}
+
+internal sealed class YouTubeChannelStatistics
+{
+    [JsonPropertyName("subscriberCount")]
+    public string? SubscriberCount { get; set; }
+
+    [JsonPropertyName("hiddenSubscriberCount")]
+    public bool HiddenSubscriberCount { get; set; }
+
+    [JsonPropertyName("videoCount")]
+    public string? VideoCount { get; set; }
+
+    [JsonPropertyName("viewCount")]
+    public string? ViewCount { get; set; }
 }

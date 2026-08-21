@@ -28,6 +28,40 @@
             </div>
         </section>
 
+        @if (Metadata.Channel is not null)
+        {
+            <section class="details-section">
+                <h3 class="details-section__heading">Channel</h3>
+                <div class="channel-card">
+                    @if (!string.IsNullOrEmpty(Metadata.Channel.ThumbnailUrl))
+                    {
+                        <img src="@Metadata.Channel.ThumbnailUrl"
+                             alt="@Metadata.Channel.Title avatar"
+                             class="channel-card__avatar" />
+                    }
+                    <div class="channel-card__info">
+                        <a class="channel-card__name"
+                           href="@($"https://www.youtube.com/channel/{Metadata.ChannelId}")"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            @Metadata.Channel.Title
+                        </a>
+                        <p class="channel-card__stats">
+                            @(Metadata.Channel.SubscriberCountHidden
+                                ? "Subscriber count hidden"
+                                : $"{FormatCount(Metadata.Channel.SubscriberCount)} subscribers")
+                            &middot; @FormatCount(Metadata.Channel.VideoCount) videos
+                            &middot; @FormatCount(Metadata.Channel.ViewCount) total views
+                        </p>
+                        @if (Metadata.Channel.CreatedAt is not null)
+                        {
+                            <p class="channel-card__joined">Joined @Metadata.Channel.CreatedAt.Value.ToString("MMM d, yyyy")</p>
+                        }
+                    </div>
+                </div>
+            </section>
+        }
+
         @if (Metadata.Tags.Count > 0 || !string.IsNullOrWhiteSpace(Metadata.CategoryName))
         {
             <section class="details-section">
@@ -71,7 +105,26 @@
                     <span class="badge badge--tech">@Metadata.Projection</span>
                 }
                 <span class="badge badge--tech">@(Metadata.LicensedContent ? "Licensed content" : "Not flagged as licensed")</span>
+                @foreach (var rating in Metadata.ContentRatings)
+                {
+                    <span class="badge badge--tech">@rating</span>
+                }
             </div>
+
+            @if (Metadata.RegionsBlocked.Count > 0)
+            {
+                <p class="details-section__row details-section__row--spaced">
+                    <span class="details-section__row-label">Blocked in:</span>
+                    @string.Join(", ", Metadata.RegionsBlocked)
+                </p>
+            }
+            @if (Metadata.RegionsAllowed.Count > 0)
+            {
+                <p class="details-section__row details-section__row--spaced">
+                    <span class="details-section__row-label">Only available in:</span>
+                    @string.Join(", ", Metadata.RegionsAllowed)
+                </p>
+            }
         </section>
 
         <section class="details-section">

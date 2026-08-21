@@ -118,13 +118,24 @@ body {
 
 .video-preview__thumb-wrap {
     position: relative;
+    aspect-ratio: 16 / 9;
+    background: #111;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .video-preview__thumb {
     width: 100%;
-    border-radius: 4px;
+    height: 100%;
+    object-fit: cover;
     display: block;
-    background: #111;
+}
+
+.video-preview__player {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
 }
 
 .video-preview__duration {
@@ -139,6 +150,35 @@ body {
     border-radius: 4px;
 }
 
+.video-preview__play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 3px; /* optically center the triangle */
+}
+
+.video-preview__play-btn:hover {
+    background: rgba(214, 0, 58, 0.9);
+}
+
+.video-preview__no-embed {
+    font-size: 0.78rem;
+    color: #888;
+    margin: 8px 0 0;
+}
+
 .video-preview__title {
     margin: 12px 0 4px;
     font-weight: 700;
@@ -150,6 +190,15 @@ body {
     margin: 0;
     color: #666;
     font-size: 0.85rem;
+}
+
+.video-preview__meta--link {
+    text-decoration: none;
+}
+
+.video-preview__meta--link:hover {
+    text-decoration: underline;
+    color: #d6003a;
 }
 
 /* ---- Video details (right side) ---- */
@@ -194,9 +243,59 @@ body {
     font-size: 0.9rem;
 }
 
+.details-section__row--spaced {
+    margin-top: 10px;
+    color: #666;
+    font-size: 0.82rem;
+}
+
 .details-section__row-label {
     color: #666;
     margin-right: 6px;
+}
+
+.channel-card {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.channel-card__avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.channel-card__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.channel-card__name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #222;
+    text-decoration: none;
+}
+
+.channel-card__name:hover {
+    color: #d6003a;
+    text-decoration: underline;
+}
+
+.channel-card__stats {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.channel-card__joined {
+    margin: 0;
+    font-size: 0.78rem;
+    color: #999;
 }
 
 .stats-grid {

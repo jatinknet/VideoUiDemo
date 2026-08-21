@@ -102,10 +102,13 @@ VideoUiDemo/
    - Makes one more small call to `GET .../videoCategories` to resolve the
      numeric category ID into a readable name (e.g. "Music", "Gaming").
      This is best-effort — if it fails, everything else still renders.
-4. On success: state → `Loaded`. `VideoPreview` renders the thumbnail card;
-   `VideoDetails` renders the rest in labeled sections: **Stats**,
-   **Tags & Category**, **Technical Details**, **Status**, **Topics**, and
-   **Description**.
+4. On success: state → `Loaded`. `VideoPreview` shows the thumbnail
+   (click to swap in YouTube's official embedded player, if the uploader
+   allows embedding) plus a link to the channel. `VideoDetails` renders the
+   rest in labeled sections: **Channel** (avatar, subscribers, total
+   views/videos), **Stats**, **Tags & Category**, **Technical Details**
+   (HD/SD, captions, dimension/projection, content ratings, region
+   restrictions), **Status**, **Topics**, and **Description**.
 5. On failure (bad URL, missing/invalid key, video not found, quota
    exceeded, network error): state → `Error`, an accessible
    (`role="alert"`) message is shown with a specific reason where possible.

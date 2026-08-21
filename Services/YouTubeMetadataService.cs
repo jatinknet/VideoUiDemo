@@ -23,6 +23,7 @@ public class YouTubeMetadataService : IVideoMetadataService
 {
     private const string VideosUrl = "https://www.googleapis.com/youtube/v3/videos";
     private const string CategoriesUrl = "https://www.googleapis.com/youtube/v3/videoCategories";
+    private const string ChannelsUrl = "https://www.googleapis.com/youtube/v3/channels";
 
     private readonly HttpClient _httpClient;
     private readonly string? _apiKey;
@@ -86,6 +87,12 @@ public class YouTubeMetadataService : IVideoMetadataService
             metadata.CategoryName = await TryResolveCategoryNameAsync(metadata.CategoryId, cancellationToken);
         }
 
+        // Best-effort: fetch full channel details (subscribers, avatar, etc).
+        if (!string.IsNullOrEmpty(metadata.ChannelId))
+        {
+            metadata.Channel = await TryFetchChannelDetailsAsync(metadata.ChannelId, cancellationToken);
+        }
+
         return metadata;
     }
 
@@ -106,6 +113,7 @@ public class YouTubeMetadataService : IVideoMetadataService
             Description = snippet?.Description ?? string.Empty,
             ThumbnailUrl = thumbnail,
             ChannelTitle = snippet?.ChannelTitle ?? string.Empty,
+            ChannelId = snippet?.ChannelId ?? string.Empty,
             PublishedAt = snippet?.PublishedAt,
             Duration = ParseIso8601Duration(item.ContentDetails?.Duration),
 
@@ -122,6 +130,9 @@ public class YouTubeMetadataService : IVideoMetadataService
             LicensedContent = item.ContentDetails?.LicensedContent ?? false,
             Dimension = item.ContentDetails?.Dimension,
             Projection = item.ContentDetails?.Projection,
+            ContentRatings = FormatContentRatings(item.ContentDetails?.ContentRating),
+            RegionsAllowed = item.ContentDetails?.RegionRestriction?.Allowed ?? new List<string>(),
+            RegionsBlocked = item.ContentDetails?.RegionRestriction?.Blocked ?? new List<string>(),
 
             PrivacyStatus = item.Status?.PrivacyStatus,
             License = item.Status?.License,
@@ -157,6 +168,79 @@ public class YouTubeMetadataService : IVideoMetadataService
             return null;
         }
     }
+
+    private async Task<ChannelDetails?> TryFetchChannelDetailsAsync(string channelId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var url = $"{ChannelsUrl}?id={Uri.EscapeDataString(channelId)}" +
+                      $"&part=snippet,statistics&key={Uri.EscapeDataString(_apiKey!)}";
+
+            using var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var parsed = JsonSerializer.Deserialize<YouTubeChannelsResponse>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            var item = parsed?.Items.FirstOrDefault();
+            if (item is null) return null;
+
+            var thumbnail =
+                item.Snippet?.Thumbnails?.High?.Url ??
+                item.Snippet?.Thumbnails?.Medium?.Url ??
+                item.Snippet?.Thumbnails?.Default?.Url ??
+                string.Empty;
+
+            return new ChannelDetails
+            {
+                Title = item.Snippet?.Title ?? string.Empty,
+                Description = item.Snippet?.Description ?? string.Empty,
+                ThumbnailUrl = thumbnail,
+                CreatedAt = item.Snippet?.PublishedAt,
+                SubscriberCount = ParseCount(item.Statistics?.SubscriberCount),
+                SubscriberCountHidden = item.Statistics?.HiddenSubscriberCount ?? false,
+                VideoCount = ParseCount(item.Statistics?.VideoCount),
+                ViewCount = ParseCount(item.Statistics?.ViewCount),
+            };
+        }
+        catch
+        {
+            // Channel details are a nice-to-have; never let it break the main result.
+            return null;
+        }
+    }
+
+    private static List<string> FormatContentRatings(YouTubeContentRating? rating)
+    {
+        if (rating?.Ratings is null || rating.Ratings.Count == 0)
+            return new List<string>();
+
+        var results = new List<string>();
+        foreach (var (key, value) in rating.Ratings)
+        {
+            if (value.ValueKind == JsonValueKind.String)
+            {
+                results.Add($"{FriendlyRatingSystemName(key)}: {value.GetString()}");
+            }
+        }
+
+        return results;
+    }
+
+    private static string FriendlyRatingSystemName(string key) => key switch
+    {
+        "mpaaRating" => "MPAA",
+        "tvpgRating" => "TV Parental Guidelines",
+        "ytRating" => "YouTube",
+        "bbfcRating" => "BBFC (UK)",
+        "fskRating" => "FSK (Germany)",
+        "cnaRating" => "CNA",
+        _ => key
+    };
 
     private static long? ParseCount(string? raw) =>
         long.TryParse(raw, out var value) ? value : null;

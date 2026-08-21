@@ -15,6 +15,7 @@ public class VideoMetadata
     public string Description { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
     public string ChannelTitle { get; set; } = string.Empty;
+    public string ChannelId { get; set; } = string.Empty;
     public DateTimeOffset? PublishedAt { get; set; }
     public TimeSpan Duration { get; set; }
 
@@ -35,6 +36,9 @@ public class VideoMetadata
     public bool LicensedContent { get; set; }
     public string? Dimension { get; set; }          // "2d" or "3d"
     public string? Projection { get; set; }         // "rectangular", "360", etc.
+    public List<string> ContentRatings { get; set; } = new(); // e.g. "mpaaRating: pg13"
+    public List<string> RegionsBlocked { get; set; } = new();
+    public List<string> RegionsAllowed { get; set; } = new();
 
     // --- Status ---
     public string? PrivacyStatus { get; set; }      // "public", "unlisted", "private"
@@ -45,10 +49,29 @@ public class VideoMetadata
     // --- Topics ---
     public List<string> TopicCategories { get; set; } = new();
 
+    // --- Channel details (separate channels.list call) ---
+    public ChannelDetails? Channel { get; set; }
+
     public string DurationDisplay =>
         Duration.TotalHours >= 1
             ? Duration.ToString(@"h\:mm\:ss")
             : Duration.ToString(@"m\:ss");
+}
+
+/// <summary>
+/// Details about the uploading channel, fetched via a follow-up
+/// channels.list call. Optional — null if that call fails or is skipped.
+/// </summary>
+public class ChannelDetails
+{
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string ThumbnailUrl { get; set; } = string.Empty;
+    public DateTimeOffset? CreatedAt { get; set; }
+    public long? SubscriberCount { get; set; }
+    public bool SubscriberCountHidden { get; set; }
+    public long? VideoCount { get; set; }
+    public long? ViewCount { get; set; }
 }
 
 public enum LoadState
